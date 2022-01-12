@@ -1,0 +1,507 @@
+---
+title: Experimental evidence shows that bulb angle reflects changes in the angle of blow
+substitle: Supplementary Information 1
+author: "Li Li"
+output:
+  pdf_document:
+    latex_engine: xelatex
+    keep_tex: no
+    number_sections: yes
+fontsize: 10pt
+linestretch: 1.15
+mainfont: Arial
+---
+
+```{r setup_analysis, include=FALSE}
+
+library(ggpubr)
+library(kableExtra)
+library(ggplot2)
+library(tidyverse)
+library(reshape2)
+
+knitr::opts_chunk$set(
+	echo = FALSE,
+	fig.pos = "!H",
+	message = FALSE,
+	warning = FALSE,
+	cache = FALSE,
+	# comment this to show hashtag for code output
+	comment = NA,
+	prompt = FALSE
+)
+
+# colorblind palette
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+
+# the drop tower dataset
+drop_tower_data = read.csv("ESM_2.csv")
+
+# the Dibble dataset with bulb angle measured
+dibble_data = read.csv("ESM_3.csv")
+
+# the MPI dataset
+mpi_data = read.csv("ESM_4.csv")
+
+# flakes used in the EPA-PD model
+# same core morphology and no beveling
+dibble_lm = dibble_data %>%
+  filter(coretype == "SEMISPHERICAL") %>%
+  filter(bevel == "NONE") %>%
+  mutate(fweight_cbrt = as.numeric(fweight)^(1/3)) %>%
+  filter(fweight > 0)
+
+new_dibble_bulb = melt(dibble_data, id.vars = "aob") %>%
+  filter(variable == "bulb_angle_vc" | variable == "bulb_angle_vg")
+
+```
+
+```{r}
+
+## function used to save plots
+save_plot = function(plot_name, width, height){
+  code_path = getwd()
+  dir.create(file.path(code_path, 'figures'), showWarnings = FALSE)
+  plot_path = paste(code_path, "/figures/", deparse(substitute(plot_name)), ".pdf", sep = "")
+  return(ggsave(plot_path, plot = plot_name, width = width, height = height))
+}
+
+```
+
+# The drop tower setup
+The drop tower used in our experiment is made of a vertical stand with an adjustable pole. An electromagnet switch controls the release of the hammer attached to a lever that can move along the supporting pole to adjust the hammer’s drop height. To test the precision of the hammer strike, we dropped ball bearings onto targets drawn on carbon paper and compared the position of the mark made by the ball bearing and the original targets. The drop tower setup can achieve a precision of around 2 mm for aiming the striking target.
+
+# Figures
+
+```{r, fig.align='center', fig.width = 6, fig.height = 4}
+
+fig6 = ggplot(drop_tower_data, aes(x = factor(AOB), y = bulb_angle)) +
+  geom_boxplot() +
+  geom_jitter(position = position_dodge2(width = 0.3)) +
+  theme_classic() +
+  labs(x = "AOB (degrees)",
+       y = "Bulb angle (degrees)")
+
+fig6
+
+save_plot(fig6, 6, 4)
+
+```
+
+__Fig.6 Boxplot showing that bulb angle decreases as angle of blow increases for flakes in the drop tower dataset.__
+
+```{r, fig.align='center', fig.width = 6, fig.height = 4}
+
+fig7 = ggplot(new_dibble_bulb, 
+                   aes(x = factor(aob), y = as.numeric(value), fill = variable)) +
+  geom_boxplot() +
+  geom_point(position = position_jitterdodge()) +
+  theme_classic() +
+  theme(legend.position = "top") +
+  labs(fill = "Method", 
+       x = "AOB (degrees)",
+       y = "Bulb angle (degrees)") +
+  scale_fill_manual(values = cbPalette, 
+                    labels = c("Vector calculation", "Virtual goniometer")) +
+  ylim(125, 165)
+
+fig7
+
+save_plot(fig7, 6, 4)
+
+```
+
+__Fig.7 Boxplot summarizing the relationship between bulb angle and angle of blow for flakes in the Dibble dataset. Flakes measured with the vector calculation method are colored in grey, flakes measured with the virtual goniometer method are colored in yellow.__
+
+
+```{r fig.align='center', fig.width = 5, fig.height = 3.5}
+
+fig8 = ggplot(dibble_data, aes(x = bulb_angle_vc, y = bulb_angle_vg, color = factor(aob))) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0) +
+  theme_classic() +
+  scale_color_viridis_d(name = "AOB") +
+  xlim(125, 165) +
+  ylim(125, 165) +
+  xlab("Bulb angle by vector calculation (degrees)") +
+  ylab("Bulb angle by virtual goniometer (degrees)")
+
+fig8
+
+save_plot(fig8, 5, 4)
+
+```
+
+__Fig.8 Comparison of the flake bulb angles measured with the vector calculation method and the virtual goniometer method in the Dibble dataset.__  
+
+
+```{r, fig.align='center', fig.width = 6, fig.height = 4}
+
+fig9 = ggplot(data = mpi_data, aes(Bulb_angle)) +
+  geom_histogram(aes(y = ..density..),
+    binwidth = 1, colour="black", fill="grey") +
+  geom_density(alpha = .2, fill = "antiquewhite3") +
+  theme_classic() +
+  labs(x = "Bulb angle (degrees)",
+       y = "Density")
+
+fig9
+
+save_plot(fig9, 6, 4)
+
+```
+__Fig.9 Histogram showing the distribution of bulb angles with overlaying density curve for all flakes analyzed in the MPI dataset.__  
+
+
+```{r echo=FALSE, fig.width = 6, fig.height = 4, mpi_all}
+
+mean_mpi_ba = mean(mpi_data$Bulb_angle)
+
+mpi_data = mpi_data %>%
+  mutate(AOB_predicted = ifelse(Bulb_angle <= mean_mpi_ba, "High", "Low"))
+
+fig10 = ggplot(mpi_data, aes(x = AOB_assigned, y = Bulb_angle)) +
+  geom_boxplot(outlier.shape=NA) +
+  geom_jitter(position = position_dodge2(width = 0.2)) +
+  theme_classic() +
+  theme(legend.position = "top") +
+  labs(x = "AOB assigned by knappers",
+       y = "Bulb angle (degrees)")
+
+fig10
+
+save_plot(fig10, 6, 4)
+
+```
+
+__Fig.10 Boxplot showing the result of the angle of blow blind test with the MPI dataset.__  
+
+
+```{r}
+
+# the baseline EPA-PD model
+dibble_lm_epa_pd = lm(fweight_cbrt ~ platthick + epa, data = dibble_lm)
+#summary(dibble_lm_epa_pd)
+
+# the EPA-PD-AOB model
+dibble_lm_epa_pd_aob = lm(fweight_cbrt ~ platthick + epa + aob, data = dibble_lm)
+#summary(dibble_lm_epa_pd_aob)
+
+# the EPA-PD-BA model
+dibble_lm_epa_pd_vc = lm(fweight_cbrt ~ platthick + epa + bulb_angle_vc, data = dibble_lm)
+#summary(dibble_lm_epa_pd_vc)
+
+dibble_lm_epa_pd_vg = lm(fweight_cbrt ~ platthick + epa + bulb_angle_vg, data = dibble_lm)
+#summary(dibble_lm_epa_pd_vg)
+
+## add modeled mass for plotting
+dibble_lm$mass_pred1 = predict(dibble_lm_epa_pd, data = dibble_lm)
+dibble_lm$mass_pred2 = predict(dibble_lm_epa_pd_aob, data = dibble_lm)
+dibble_lm$mass_pred3 = predict(dibble_lm_epa_pd_vc, data = dibble_lm)
+dibble_lm$mass_pred4 = predict(dibble_lm_epa_pd_vg, data = dibble_lm)
+
+```
+
+```{r fig.align='center', fig.width = 10, fig.height = 11}
+
+fig11a = ggplot(dibble_lm, aes(x = fweight_cbrt, y = mass_pred1)) +
+  geom_point(aes(color = factor(aob))) +
+  geom_smooth(formula = y ~ x, method = "lm") +
+  theme_classic() +
+  scale_color_viridis_d() +
+  labs(color = "AOB") +
+  xlab("Actual flake mass (cube root)\nBasic EPA-PD model") +
+  ylab("Predicted flake mass (cube root)")
+
+fig11b = ggplot(dibble_lm, aes(x = fweight_cbrt, y = mass_pred2)) +
+  geom_point(aes(color = factor(aob))) +
+  geom_smooth(formula = y ~ x, method = "lm") +
+  theme_classic() +
+  scale_color_viridis_d() +
+  labs(color = "AOB") +
+  xlab("Actual flake mass (cube root)\nEPA-PD-AOB model") +
+  ylab("Predicted flake mass (cube root)")
+
+fig11c = ggplot(dibble_lm, aes(x = fweight_cbrt, y = mass_pred3)) +
+  geom_point(aes(color = factor(aob))) +
+  geom_smooth(formula = y ~ x, method = "lm") +
+  theme_classic() +
+  scale_color_viridis_d() +
+  labs(color = "AOB") +
+  xlab("Actual flake mass (cube root)\nEPA-PD-BA (VC) model") +
+  ylab("Predicted flake mass (cube root)")
+
+fig11d = ggplot(dibble_lm, aes(x = fweight_cbrt, y = mass_pred4)) +
+  geom_point(aes(color = factor(aob))) +
+  geom_smooth(formula = y ~ x, method = "lm") +
+  theme_classic() +
+  scale_color_viridis_d() +
+  labs(color = "AOB") +
+  xlab("Actual flake mass (cube root)\nEPA-PD-BA (VG) model") +
+  ylab("Predicted flake mass (cube root)")
+
+fig11 = ggarrange(fig11a, fig11b, fig11c, fig11d, nrow = 2, ncol = 2, labels = c("(a)", "(b)", "(c)", "(d)"), vjust = 1, hjust = 0, common.legend = TRUE)
+
+fig11
+save_plot(fig11, 7, 8)
+
+```
+
+__Fig.11 Comparison of the actual flake mass and modeled flake mass in the Dibble dataset, n = 53. (a) Actual to predicted flake mass using the basic EPA-PD model, (b) actual to predicted flake mass using the EPA-PD-AOB model, (c) actual to predicted flake mass using the EPA-PD-BA (vector calculation) model, and (d) actual to predicted flake mass using the EPA-PD-BA (virtual goniometer) model.__
+
+# Tables
+__Table 1 Summary statistics of the different EPA-PD models__  
+
+```{r}
+#summary(dibble_lm_epa_pd)
+dibble_lm_r_sqrd = round(summary(dibble_lm_epa_pd)$r.squared,2)
+dibble_lm_r_sqrdadj = round(summary(dibble_lm_epa_pd)$adj.r.squared,2)
+dibble_lm_f_value = round(summary(dibble_lm_epa_pd)$fstatistic[1],2)
+dibble_lm_df = summary(dibble_lm_epa_pd)$fstatistic[2]
+dibble_lm_dendf = summary(dibble_lm_epa_pd)$fstatistic[3]
+
+#summary(dibble_lm_epa_pd_aob)
+dibble_lm_aob_r_sqrd = round(summary(dibble_lm_epa_pd_aob)$r.squared,2)
+dibble_lm_aob_r_sqrdadj = round(summary(dibble_lm_epa_pd_aob)$adj.r.squared,2)
+dibble_lm_aob_f_value = round(summary(dibble_lm_epa_pd_aob)$fstatistic[1],2)
+dibble_lm_aob_df = summary(dibble_lm_epa_pd_aob)$fstatistic[2]
+dibble_lm_aob_dendf = summary(dibble_lm_epa_pd_aob)$fstatistic[3]
+
+## vector calculation method
+#summary(dibble_lm_epa_pd_vc)
+dibble_lm_vc_r_sqrd = round(summary(dibble_lm_epa_pd_vc)$r.squared,2)
+dibble_lm_vc_r_sqrdadj = round(summary(dibble_lm_epa_pd_vc)$adj.r.squared,2)
+dibble_lm_vc_f_value = round(summary(dibble_lm_epa_pd_vc)$fstatistic[1],2)
+dibble_lm_vc_df = summary(dibble_lm_epa_pd_vc)$fstatistic[2]
+dibble_lm_vc_dendf = summary(dibble_lm_epa_pd_vc)$fstatistic[3]
+
+## virtual goniometer method
+#summary(dibble_lm_epa_pd_vg)
+dibble_lm_vg_r_sqrd = round(summary(dibble_lm_epa_pd_vg)$r.squared,2)
+dibble_lm_vg_r_sqrdadj = round(summary(dibble_lm_epa_pd_vg)$adj.r.squared,2)
+dibble_lm_vg_f_value = round(summary(dibble_lm_epa_pd_vg)$fstatistic[1],2)
+dibble_lm_vg_df = summary(dibble_lm_epa_pd_vg)$fstatistic[2]
+dibble_lm_vg_dendf = summary(dibble_lm_epa_pd_vg)$fstatistic[3]
+
+dibble_lm_stats = data.frame(
+  basic_lm = c(dibble_lm_r_sqrd, dibble_lm_r_sqrdadj, paste(dibble_lm_f_value,"(",dibble_lm_df,",",dibble_lm_dendf,")", sep = "")),
+  aob_lm = c(dibble_lm_aob_r_sqrd, dibble_lm_aob_r_sqrdadj, paste(dibble_lm_aob_f_value,"(",dibble_lm_aob_df,",",dibble_lm_aob_dendf,")", sep = "")),
+  vc_lm = c(dibble_lm_vc_r_sqrd, dibble_lm_vc_r_sqrdadj, paste(dibble_lm_vc_f_value,"(",dibble_lm_vc_df,",",dibble_lm_vc_dendf,")", sep = "")),
+  vg_lm = c(dibble_lm_vg_r_sqrd, dibble_lm_vg_r_sqrdadj, paste(dibble_lm_vg_f_value,"(",dibble_lm_vg_df,",",dibble_lm_vg_dendf,")", sep = ""))
+)
+
+rownames(dibble_lm_stats) = c("R$^2$","Adj. R$^2$","F statistics")
+
+kbl(
+  dibble_lm_stats,
+  booktabs = T, 
+  align = "c",
+  escape = F,
+  row.names = T,
+  col.names = linebreak(c("Basic EPA-PD model", "EPA-PD-AOB model", "EPA-PD-BA (VC) model",  "EPA-PD-BA (VG) model"), align = "l")) %>%
+  kable_styling(latex_options = c("striped", "HOLD_position")) %>%
+  column_spec(1, width = "1.8cm") %>%
+  column_spec(2:5, width = "3cm")
+
+```
+
+# Supplementary Figures
+
+```{r, fig.align='center', fig.width = 6, fig.height = 4}
+
+# calculate the standard error of bulb angle measurements in the drop tower dataset
+drop_error = drop_tower_data %>%
+  rowwise() %>%
+  mutate(ba_sd = round(sd(c(bulb_angle_1, bulb_angle_2, bulb_angle_3)), 2),
+         ba_se = round(ba_sd/sqrt(4), 2))
+
+mean_se_1 = mean(drop_error$ba_se)
+
+fig4.1 = ggplot(data = drop_error, aes(ba_se)) +
+  geom_histogram(binwidth = 0.2, colour="black", fill="grey") +
+  theme_classic() +
+  labs(x = "Standard error of bulb angle (degrees)",
+       y = "Count")
+
+fig4.1
+
+#save_plot(fig4.1, 6, 4)
+```
+__Fig4.1 Histogram showing the distribution of the standard error of the three bulb angle measurements for each flake in the drop tower dataset.__  
+
+```{r, fig.align='center', fig.width = 6, fig.height = 4}
+
+# calculate the standard error of bulb angle measurements in the drop tower dataset
+mpi_error = mpi_data %>%
+  rowwise() %>%
+  mutate(ba_sd = round(sd(c(bulb_angle_1, bulb_angle_2, bulb_angle_3, bulb_angle_4)), 2),
+         ba_se = round(ba_sd/sqrt(4), 2))
+
+mean_se_2 = mean(mpi_error$ba_se)
+
+fig4.2 = ggplot(data = mpi_error, aes(ba_se)) +
+  geom_histogram(binwidth = 0.2, colour="black", fill="grey") +
+  theme_classic() +
+  labs(x = "Standard error of bulb angle (degrees)",
+       y = "Count")
+
+fig2.2
+
+#save_plot(fig4.2, 6, 4)
+```
+__Fig4.1 Histogram showing the distribution of the standard error of the four bulb angle measurements for each flake in the MPI dataset.__  
+
+\pagebreak
+
+# Supplementary Tables
+__Table 5.1 Summary statistics of bulb angle by angle of blow for the drop tower dataset (n = 103).__
+
+```{r}
+
+drop_tower_data %>%
+  group_by(AOB) %>%
+  summarise(count = n(),
+            mean = round(mean(bulb_angle,na.rm=TRUE), 1), 
+            sd = round(sd(bulb_angle, na.rm = TRUE), 2),
+            var = round(var(bulb_angle, na.rm = TRUE), 2)) %>%
+            #se = round(sd/sqrt(count), 2)) %>%
+  kbl(align = "c",
+      col.names = linebreak(c("AOB", "Count", "Bulb angle (mean)", "SD", "Variance"), align = "l"),
+      booktabs = T) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), 
+                full_width = FALSE,
+                latex_options = "HOLD_position")
+
+```
+
+__Table 5.2 Summary of bulb angle by angle of blow based on the measurement method, VG refers to the virtual goniometer method and VC refers to the vector calculation method (the Dibble dataset, n = 70).__  
+
+```{r tab-2}
+
+dibble_data %>%
+  group_by(aob) %>%
+  summarise(mean_vector = round(mean(bulb_angle_vc,na.rm=TRUE), 1), 
+            sd_vector = round(sd(bulb_angle_vc, na.rm = TRUE), 1),
+            #var_vector = round(var(bulb_angle_vc, na.rm = TRUE), 1),
+            mean_v_goniometer = round(mean(bulb_angle_vg,na.rm=TRUE), 1), 
+            sd_v_goniometer = round(sd(bulb_angle_vg, na.rm = TRUE), 1),
+            #var_v_goniometer = round(var(bulb_angle_vg, na.rm = TRUE), 1),
+            count = n()
+            ) %>%
+  kbl(col.names = linebreak(c("AOB", "Bulb angle (mean)", "SD", "Bulb angle (mean)", "SD", "Count"), align = "l"),
+      booktabs = T) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), 
+                full_width = FALSE,
+                latex_options = "HOLD_position") %>%
+   add_header_above(c(" " = 1, "Vector calculation" = 2, "Virtual goniometer" = 2, " " = 1))
+
+```
+
+__Table 5.3 Summary of angle blow prediction for all flakes in the MPI dataset.__    
+
+```{r}
+
+mpi_data %>%
+  group_by(AOB_assigned) %>%
+  summarise(mean_aob = round(mean(Bulb_angle), 1),
+            sd_ba = round(sd(Bulb_angle), 2),
+            count = n()) %>%
+  kbl(col.names = linebreak(c("AOB assigned by knappers", "Average bulb angle", "SD of bulb angle", "Count"), align = "l"),
+      booktabs = T) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), 
+                full_width = FALSE,
+                latex_options = "HOLD_position")
+
+```
+
+\pagebreak
+
+# Statistical analysis
+
+## The drop tower dataset
+__Kruskal-Wallis test checking the difference in bulb angle by angle of blow for flakes in the drop tower dataset:__  
+```{r}
+
+## Kruskal-Wallis test of the drop tower dataset
+kruskal.test(bulb_angle ~ factor(AOB), data = drop_tower_data)
+
+```
+
+__Linear regression to examine the effect of angle of blow and platform depth on bulb angle for flakes in the drop tower dataset:__  
+```{r}
+
+summary(lm(bulb_angle ~ AOB + pd_mm, data = drop_tower_data))
+
+```
+
+## The Dibble dataset
+
+__Kruskal-Wallis test checking the difference in bulb angle (measured with the vector calculation method) by angle of blow for flakes in the Dibble dataset:__  
+```{r}
+
+# Krukal-Wallis test on flakes measured with the vector calculation method
+kruskal.test(bulb_angle_vc ~ factor(aob), data = dibble_data)
+
+```
+
+__Linear regression to examine the effect of angle of blow, exterior platform angle, and platform depth on bulb angle (measured with the vector calculation method) for flakes in the Dibble dataset:__  
+```{r}
+
+summary(lm(bulb_angle_vc ~ aob + platthick + epa, data = dibble_data))
+
+```
+
+__Linear regression to examine the correlation between the angle of blow and platform depth in the Dibble dataset:__  
+
+```{r}
+
+# there is a significant correlation between platform depth and angle of blow
+summary(lm(platthick ~ aob, data = dibble_data))
+
+```
+
+__Kruskal-Wallis test checking the difference in bulb angle (measured with the virtual goniometer method) by angle of blow for flakes in the Dibble dataset:__  
+```{r}
+
+# Krukal-Wallist test on flakes measured with the virtual goniometer method
+kruskal.test(bulb_angle_vg ~ factor(aob), data = dibble_data)
+
+```
+
+__Linear regression to examine the effect of angle of blow, exterior platform angle, and platform depth on bulb angle (measured with the virtual goniometer method) for flakes in the Dibble dataset:__  
+```{r}
+
+summary(lm(bulb_angle_vg ~ aob + epa + platthick, data = dibble_data))
+
+```
+
+
+## The MPI dataset
+
+__Kruskal-Wallis tests comparing the difference in bulb angle by angle of blow (the MPI dataset):__  
+```{r}
+
+## Kruskal-Wallis test of the difference in bulb angle by angle of blow predicted by LL for the MPI dataset:
+kruskal.test(Bulb_angle ~ factor(AOB_assigned), data = mpi_data)
+
+```
+
+## The EPA-PD model comparison
+
+__ANOVA test comparing the EPA-PD model and the EPA-PD-AOB model:__  
+
+```{r}
+
+anova(dibble_lm_epa_pd, dibble_lm_epa_pd_aob)
+
+```
+
+__ANOVA test comparing the EPA-PD model and the EPA-PD-BA model:__  
+
+```{r}
+
+anova(dibble_lm_epa_pd, dibble_lm_epa_pd_vc)
+anova(dibble_lm_epa_pd, dibble_lm_epa_pd_vg)
+
+```
